@@ -1,0 +1,70 @@
+// Prisma schema for the library book catalog.
+// Docs: https://www.prisma.io/docs/orm/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATRON
+  LIBRARIAN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  role      Role     @default(PATRON)
+  createdAt DateTime @default(now())
+
+  reviews Review[]
+}
+
+model Genre {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  books Book[]
+}
+
+model Book {
+  id              Int      @id @default(autoincrement())
+  title           String
+  author          String
+  publishedYear   Int
+  copiesAvailable Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  // Each book points at exactly one genre row.
+  genreId Int
+  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Restrict)
+
+  reviews Review[]
+
+  @@unique([title, author])
+  @@index([genreId])
+}
+
+// Stretch task: a user's rating and comment on a book.
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int // 1 to 5, enforced in application code
+  comment   String?
+  createdAt DateTime @default(now())
+
+  bookId Int
+  book   Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One review per user per book.
+  @@unique([bookId, userId])
+  @@index([bookId])
+}
